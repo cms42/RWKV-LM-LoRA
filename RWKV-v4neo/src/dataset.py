@@ -46,6 +46,12 @@ class MyDataset(Dataset):
                     assert MaybeIsPrime(args.magic_prime)
                     assert args.magic_prime % 3 == 2
                     assert args.magic_prime / dataset_slot > 0.99 and args.magic_prime / dataset_slot <= 1
+        elif args.data_type == "numpy_v2":
+            self.data = np.load(args.data_file,allow_pickle=True)
+            self.vocab_size = args.vocab_size
+            rank_zero_info("Current vocab size =" + str(self.vocab_size) + "(make sure it's correct)")
+            self.data_size = len(self.data)
+            rank_zero_info(f"Data has {self.data_size} tokens.")
         elif args.data_type == "numpy":
             self.data = np.load(args.data_file).astype("int")
             self.vocab_size = args.vocab_size
@@ -102,6 +108,18 @@ class MyDataset(Dataset):
         epoch = self.real_epoch
         world_size = self.world_size
         # print(f"epoch {epoch} idx {idx} rank {rank}/{world_size}")
+
+        if args.data_type == "numpy_v2":
+            i = np.random.randint(0, self.data_size-1)
+            d = self.data[i,0]
+            if(len(d)>args.ctx_len+1):
+                d = d[:args.ctx_len+1]
+            x = torch.tensor(d[:-1], dtype=torch.long)
+            y = torch.tensor(d[1:], dtype=torch.long)
+            if args.my_qa_mask:
+                z = torch.tensor(self.data[i,1][1:args.ctx_len+1], dtype=torch.bfloat16)
+                return x,y,z
+            return x,y
 
         if args.data_type == "wds_img":
             def init_wds(self, bias=0):

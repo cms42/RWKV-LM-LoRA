@@ -7,6 +7,8 @@ Existing RWKV-v4neo models/checkpoints should work out of the box.
 Now only LoRA-finetuned weights are checkpointed during training: it provides much smaller checkpoints, but you now need to specify the base model to use it.
 See `args.MODEL_LOAD` and `args.MODEL_LORA` in `RWKV-v4neo/chat.py`.
 
+Requirements: `deepspeed pytorch_lightning`
+
 To finetune an existing model with LoRA, just work like full finetuning but with the LoRA options, in the directory `RWKV-v4neo`:
 
 ```
@@ -32,7 +34,3 @@ args.MODEL_LORA = 'your_lora_checkpoint.pth'
 args.lora_r = 8
 args.lora_alpha = 32
 ```
-
-## TODOs
-
-* Seperate model merging to allow LoRA pretrained models to be used with other RWKV inference implementation (especially [ChatRWKV](https://github.com/BlinkDL/ChatRWKV))
