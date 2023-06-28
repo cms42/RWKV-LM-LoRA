@@ -5,11 +5,11 @@
 import numpy as np
 import jsonlines
 from tqdm import tqdm
+from rwkv import rwkv_tokenizer
 
-from transformers import PreTrainedTokenizerFast
-tokenizer = PreTrainedTokenizerFast(tokenizer_file='20B_tokenizer.json')
+tokenizer = rwkv_tokenizer.TRIE_TOKENIZER('./rwkv_vocab_v20230424.txt')
 
-input_file = r"E:\LLM\Mo\train.jsonl"
+input_file = "train_new.jsonl"
 output_file = 'train.npy'
 
 TASK = 'tokenize' # tokenize verify
