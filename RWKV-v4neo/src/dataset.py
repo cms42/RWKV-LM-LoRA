@@ -46,6 +46,25 @@ class MyDataset(Dataset):
                     assert MaybeIsPrime(args.magic_prime)
                     assert args.magic_prime % 3 == 2
                     assert args.magic_prime / dataset_slot > 0.99 and args.magic_prime / dataset_slot <= 1
+        elif args.data_type == "numpy_v3":
+            assert args.my_qa_mask
+            file = np.load(args.data_file)
+            tokens = file["tokens"]
+            lens = file["lens"]
+            l = len(tokens)
+            self.vocab_size = args.vocab_size
+            self.data_size = l
+            self.tokens = np.ndarray(shape=(l,args.ctx_len+1),dtype='int32')
+            self.mask = np.ndarray(shape=(l,args.ctx_len+1),dtype='uint8')
+            self.lens = np.ndarray(shape=(l,2),dtype='int32')
+            self.tokens.fill(0)
+            self.mask.fill(0)
+            for i,(l1,l2) in enumerate(lens):
+                self.tokens[i,:l1+l2] = tokens[i,:min(args.ctx_len+1,l1+l2)]
+                self.mask[i,l1:l1+l2] = 1
+                self.lens[i,0] = l1
+                self.lens[i,1] = min(l2, args.ctx_len-l1+1)
+            self.force_padding = (args.micro_bsz>1) # If micro batch size>1, we must make sure every piece of data is of equal length
         elif args.data_type == "numpy_v2":
             self.data = np.load(args.data_file,allow_pickle=True)
             self.vocab_size = args.vocab_size
@@ -108,6 +127,20 @@ class MyDataset(Dataset):
         epoch = self.real_epoch
         world_size = self.world_size
         # print(f"epoch {epoch} idx {idx} rank {rank}/{world_size}")
+
+        if args.data_type == "numpy_v3":
+            i = np.random.randint(0, self.data_size-1)
+            if(self.force_padding):
+                x = torch.tensor(self.tokens[i,:-1], dtype=torch.long)
+                y = torch.tensor(self.tokens[i,1: ], dtype=torch.long)
+                z = torch.tensor(self.mask  [i,1: ], dtype=torch.bfloat16)
+            else:
+                l1,l2 = self.lens[i]
+                l = l1+l2
+                x = torch.tensor(self.tokens[i,:l-1], dtype=torch.long)
+                y = torch.tensor(self.tokens[i,1:l ], dtype=torch.long)
+                z = torch.tensor(self.mask  [i,1:l ], dtype=torch.bfloat16)
+            return x,y,z
 
         if args.data_type == "numpy_v2":
             i = np.random.randint(0, self.data_size-1)
